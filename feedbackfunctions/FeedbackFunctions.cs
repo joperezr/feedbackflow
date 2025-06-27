@@ -16,7 +16,7 @@ using SharedDump.Models.TwitterFeedback;
 using SharedDump.Models.BlueSkyFeedback;
 using SharedDump.Json;
 using SharedDump.Services.Interfaces;
-using FeedbackFunctions.Utils;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FeedbackFunctions;
 
@@ -94,16 +94,11 @@ public class FeedbackFunctions
     /// GET /api/GetGitHubFeedback?repo=dotnet/maui&amp;labels=bug,documentation&amp;pulls=true
     /// </remarks>
     [Function("GetGitHubFeedback")]
+    [Authorize]
     public async Task<HttpResponseData> GetGitHubFeedback(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing GitHub feedback request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var repo = queryParams["repo"];
@@ -173,16 +168,11 @@ public class FeedbackFunctions
     /// GET /api/GetHackerNewsFeedback?ids=123456,789012
     /// </remarks>
     [Function("GetHackerNewsFeedback")]
+    [Authorize]
     public async Task<HttpResponseData> GetHackerNewsFeedback(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing HackerNews feedback request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var idsParam = queryParams["ids"];
@@ -222,16 +212,11 @@ public class FeedbackFunctions
     }
 
     [Function("GetYouTubeFeedback")]
+    [Authorize]
     public async Task<HttpResponseData> GetYouTubeFeedback(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing YouTube feedback request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var videoIds = queryParams["videos"]?.Split(',', StringSplitOptions.RemoveEmptyEntries);
@@ -293,16 +278,11 @@ public class FeedbackFunctions
     }
 
     [Function("GetRedditFeedback")]
+    [Authorize]
     public async Task<HttpResponseData> GetRedditFeedback(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing Reddit feedback request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var threadIds = queryParams["threads"]?.Split(',', StringSplitOptions.RemoveEmptyEntries);
@@ -352,16 +332,11 @@ public class FeedbackFunctions
     }
 
     [Function("GetDevBlogsFeedback")]
+    [Authorize]
     public async Task<HttpResponseData> GetDevBlogsFeedback(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing DevBlogs feedback request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         try
         {
@@ -416,16 +391,11 @@ public class FeedbackFunctions
     /// ```
     /// </remarks>
     [Function("AnalyzeComments")]
+    [Authorize]
     public async Task<HttpResponseData> AnalyzeComments(
         [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
     {
         _logger.LogInformation("Processing comment analysis request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         try
         {
@@ -462,16 +432,11 @@ public class FeedbackFunctions
     }
 
     [Function("AnalyzeCommentsBYOK")]
+    [Authorize]
     public async Task<HttpResponseData> AnalyzeCommentsBYOK(
         [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
     {
         _logger.LogInformation("Processing BYOK comment analysis request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         try
         {
@@ -517,16 +482,11 @@ public class FeedbackFunctions
     }
 
     [Function("GetGitHubItemComments")]
+    [Authorize]
     public async Task<HttpResponseData> GetGitHubItemComments(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing GitHub item comments request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var repo = queryParams["repo"];
@@ -583,16 +543,11 @@ public class FeedbackFunctions
     }
 
     [Function("GetTwitterFeedback")]
+    [Authorize]
     public async Task<HttpResponseData> GetTwitterFeedback(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing Twitter/X feedback request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var tweetUrlOrId = queryParams["tweet"];
@@ -626,16 +581,11 @@ public class FeedbackFunctions
     }
 
     [Function("GetBlueSkyFeedback")]
+    [Authorize]
     public async Task<HttpResponseData> GetBlueSkyFeedback(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing BlueSky feedback request");
-
-        // Validate authentication
-        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
-        {
-            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
-        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var postUrlOrId = queryParams["post"];

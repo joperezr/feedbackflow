@@ -7,10 +7,27 @@ using FeedbackWebApp.Services.Interfaces;
 using Microsoft.AspNetCore.Rewrite;
 using SharedDump.Services;
 using SharedDump.Services.Interfaces;
+using AspNetCore.Authentication.ApiKey;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+// Configure cookie authentication
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
+        options.SlidingExpiration = true;
+        options.Cookie.Name = "FeedbackFlowAuth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    });
+
+builder.Services.AddAuthorization();
 
 // Add SpeechSynthesis services
 builder.Services.AddSpeechSynthesisServices();
@@ -23,6 +40,12 @@ builder.Services.AddRazorComponents()
         options.EnableDetailedErrors = true;
         options.MaximumReceiveMessageSize = 1_024_000; // 200 KB or more
     });
+
+// Add MVC controllers and views for authentication
+builder.Services.AddControllersWithViews();
+
+// Add HTTP context accessor for authentication service
+builder.Services.AddHttpContextAccessor();
     
 // Register ToastService and other services
 builder.Services.AddScoped<IToastService, ToastService>();
@@ -61,10 +84,18 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Map controller routes for authentication
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

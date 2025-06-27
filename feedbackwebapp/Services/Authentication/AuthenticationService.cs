@@ -1,61 +1,55 @@
-using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
 
 namespace FeedbackWebApp.Services.Authentication;
 
 public class AuthenticationService
 {
-    private readonly IJSRuntime _jsRuntime;
-    private const string AUTH_KEY = "feedbackflow_auth";
-    private const string PASSWORD_KEY = "feedbackflow_password";
-    private bool? _isAuthenticated;
-    private string? _cachedPassword;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IConfiguration _configuration;
 
-    public AuthenticationService(IJSRuntime jsRuntime)
+    public AuthenticationService(IHttpContextAccessor httpContextAccessor, IConfiguration configuration)
     {
-        _jsRuntime = jsRuntime;
+        _httpContextAccessor = httpContextAccessor;
+        _configuration = configuration;
     }
 
-    public async Task<bool> IsAuthenticatedAsync()
+    public Task<bool> IsAuthenticatedAsync()
     {
-        if (_isAuthenticated.HasValue)
-            return _isAuthenticated.Value;
-
-        var token = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", AUTH_KEY);
-        _isAuthenticated = !string.IsNullOrEmpty(token);
-        return _isAuthenticated.Value;
+        var httpContext = _httpContextAccessor.HttpContext;
+        var isAuthenticated = httpContext?.User?.Identity?.IsAuthenticated ?? false;
+        return Task.FromResult(isAuthenticated);
     }
 
-    public async Task<string?> GetPasswordAsync()
+    public Task<string?> GetPasswordAsync()
     {
-        if (_cachedPassword != null)
-            return _cachedPassword;
-            
-        _cachedPassword = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", PASSWORD_KEY);
-        return _cachedPassword;
+        // For API calls, we still need the password from configuration
+        // Check if we're in mock mode (bypass auth)
+        var useMocks = _configuration.GetValue<bool>("FeedbackApi:UseMocks");
+        if (useMocks)
+        {
+            return Task.FromResult<string?>("mock");
+        }
+
+        // Get the expected password from configuration for API calls
+        var expectedPassword = _configuration["FeedbackApp:AccessPassword"];
+        return Task.FromResult<string?>(expectedPassword);
     }
 
     public async Task SetAuthenticatedAsync(bool authenticated, string? password = null)
     {
-        if (authenticated)
-        {
-            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AUTH_KEY, "authenticated");
-            if (!string.IsNullOrEmpty(password))
-            {
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", PASSWORD_KEY, password);
-                _cachedPassword = password;
-            }
-        }
-        else
-        {
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", AUTH_KEY);
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", PASSWORD_KEY);
-            _cachedPassword = null;
-        }
-        _isAuthenticated = authenticated;
+        // This method is now handled by the AuthController
+        // We keep it for backward compatibility but it's a no-op
+        await Task.CompletedTask;
     }
 
     public async Task LogoutAsync()
     {
-        await SetAuthenticatedAsync(false);
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        }
     }
 }

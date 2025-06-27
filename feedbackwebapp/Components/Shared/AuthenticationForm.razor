@@ -1,30 +1,32 @@
 @using FeedbackWebApp.Services.Authentication
+@using Microsoft.AspNetCore.Authorization
 @inject IConfiguration Configuration
 @inject AuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 @if (!useMockMode && !isAuthenticated && !isLoading)
 {
     <div class="card shadow-sm">
         <div class="card-body">
             <h5 class="card-title">Authentication Required</h5>
-            <div class="form-floating mb-3">
-                <input type="password" class="form-control" id="password" @bind="password" @onkeyup="HandleKeyPress" placeholder="Enter password" />
-                <label for="password">Password</label>
-            </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-primary" @onclick="AuthenticateHandler">Login</button>
-            </div>
-            @if (!string.IsNullOrEmpty(authError))
-            {
-                <div class="alert alert-danger mt-3" role="alert">
-                    @authError
-                </div>
-            }
+            <p>You need to log in to access this content.</p>
+            <button class="btn btn-primary" @onclick="NavigateToLogin">Login</button>
+        </div>
+    </div>
+}
+else if (isAuthenticated)
+{ 
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title text-success">Authenticated</h5>
+            <p>You are successfully authenticated and can access all features.</p>
+            <button class="btn btn-outline-secondary" @onclick="LogoutHandler">Logout</button>
         </div>
     </div>
 }
 else
-{ 
+{
     <div class="card shadow-sm">
         <div class="card-body">
             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -34,8 +36,6 @@ else
 }
 
 @code {
-    private string password = "";
-    private string authError = "";
     private bool useMockMode;
     private bool isAuthenticated;
     private bool isLoading = true;
@@ -43,15 +43,12 @@ else
     [Parameter]
     public EventCallback<bool> OnAuthenticated { get; set; }
 
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if(!firstRender) 
             return;
         try
         {
-
-
             useMockMode = Configuration.GetValue<bool>("FeedbackApi:UseMocks");
             if (useMockMode)
             {
@@ -61,21 +58,12 @@ else
 
             // Check if already authenticated
             isAuthenticated = await AuthService.IsAuthenticatedAsync();
-            if (isAuthenticated)
-            {
-                await HandleAuthenticated(true);
-                return;
-            }
-
-            var configuredPassword = Configuration["FeedbackApp:AccessPassword"];
-            if (string.IsNullOrEmpty(configuredPassword))
-            {
-                authError = "System error: Password not configured";
-            }
+            await HandleAuthenticated(isAuthenticated);
         }
         catch (Exception ex)
         {
-            authError = $"System error: {ex.Message}";
+            // Handle authentication check error
+            Console.WriteLine($"Authentication check error: {ex.Message}");
         }
         finally
         {
@@ -84,39 +72,29 @@ else
         }
     }
 
-    private async Task HandleKeyPress(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            await AuthenticateHandler();
-        }
-    }
-
     private async Task HandleAuthenticated(bool success)
     {
         isAuthenticated = success;
-        await AuthService.SetAuthenticatedAsync(success, success ? password : null);
         await OnAuthenticated.InvokeAsync(success);
     }
 
-    private async Task AuthenticateHandler()
+    private void NavigateToLogin()
     {
-        var configuredPassword = Configuration["FeedbackApp:AccessPassword"];
-        if (string.IsNullOrEmpty(configuredPassword))
-        {
-            authError = "System error: Password not configured";
-            return;
-        }
+        var returnUrl = Uri.EscapeDataString(Navigation.Uri);
+        Navigation.NavigateTo($"/auth/login?returnUrl={returnUrl}");
+    }
 
-        if (password == configuredPassword)
+    private async Task LogoutHandler()
+    {
+        try
         {
-            authError = "";
-            await HandleAuthenticated(true);
+            await AuthService.LogoutAsync();
+            // Reload the page to update authentication state
+            await JSRuntime.InvokeVoidAsync("location.reload");
         }
-        else
+        catch (Exception ex)
         {
-            authError = "Invalid password";
-            password = "";
+            Console.WriteLine($"Logout error: {ex.Message}");
         }
     }
 }

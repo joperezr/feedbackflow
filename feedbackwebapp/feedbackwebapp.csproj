@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Blazor.SpeechSynthesis" />
+    <PackageReference Include="AspNetCore.Authentication.ApiKey" />
     <PackageReference Include="Markdig" />
   </ItemGroup>
 

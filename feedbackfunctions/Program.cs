@@ -15,12 +15,24 @@ using SharedDump.Services;
 using SharedDump.Services.Interfaces;
 using SharedDump.Services.Mock;
 using System.Configuration;
+using AspNetCore.Authentication.ApiKey;
+using FeedbackFunctions.Services;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
 builder.ConfigureFunctionsWebApplication();
+
+// Configure authentication
+builder.Services.AddAuthentication(ApiKeyDefaults.AuthenticationScheme)
+    .AddApiKeyInHeader<FeedbackFlowApiKeyProvider>(options =>
+    {
+        options.Realm = "FeedbackFlow API";
+        options.KeyName = "X-FeedbackFlow-Auth";
+    });
+
+builder.Services.AddAuthorization();
 
 
 #if DEBUG
