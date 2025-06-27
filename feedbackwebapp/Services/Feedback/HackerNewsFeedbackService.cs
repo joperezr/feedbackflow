@@ -10,16 +10,19 @@ public record HackerNewsAnalysis(string MarkdownResult, List<HackerNewsItem> Sto
 public class HackerNewsFeedbackService : FeedbackService, IHackerNewsFeedbackService
 {
     private readonly string _storyId;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
     public HackerNewsFeedbackService(
         IHttpClientFactory http, 
         IConfiguration configuration,
         UserSettingsService userSettings,
+        AuthenticatedHttpClientService authHttpClient,
         string storyId,
         FeedbackStatusUpdate? onStatusUpdate = null) 
         : base(http, configuration, userSettings, onStatusUpdate)
     {
         _storyId = storyId;
+        _authHttpClient = authHttpClient;
     }
 
     public override async Task<(string rawComments, int commentCount, object? additionalData)> GetComments()
@@ -40,7 +43,14 @@ public class HackerNewsFeedbackService : FeedbackService, IHackerNewsFeedbackSer
 
         // Get comments from the Hacker News API
         var getFeedbackUrl = $"{BaseUrl}/api/GetHackerNewsFeedback?code={Uri.EscapeDataString(hnCode)}&ids={Uri.EscapeDataString(processedId)}&maxComments={maxComments}";
-        var feedbackResponse = await Http.GetAsync(getFeedbackUrl);
+        var feedbackResponse = await _authHttpClient.GetAsync(getFeedbackUrl);
+        
+        // Check for authentication errors before EnsureSuccessStatusCode
+        if (feedbackResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            throw new UnauthorizedAccessException("Authentication failed: Invalid or missing authentication header");
+        }
+        
         feedbackResponse.EnsureSuccessStatusCode();
         var responseContent = await feedbackResponse.Content.ReadAsStringAsync();
 
@@ -85,7 +95,7 @@ public class HackerNewsFeedbackService : FeedbackService, IHackerNewsFeedbackSer
         UpdateStatus(FeedbackProcessStatus.AnalyzingComments, $"Analyzing {totalComments} comments...");
 
         // Analyze the comments
-        var markdownResult = await AnalyzeCommentsInternal("hackernews", comments, totalComments);
+        var markdownResult = await AnalyzeCommentsInternal("hackernews", comments, totalComments, null, _authHttpClient);
 
         // If we have analyses, update their MarkdownResult
         if (additionalData is List<HackerNewsAnalysis> analyses && analyses.Any())

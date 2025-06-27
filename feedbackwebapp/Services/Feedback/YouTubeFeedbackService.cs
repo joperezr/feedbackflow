@@ -9,11 +9,13 @@ public class YouTubeFeedbackService : FeedbackService, IYouTubeFeedbackService
 {
     private readonly string _videoId;
     private readonly string _playlistId;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
     public YouTubeFeedbackService(
         IHttpClientFactory http, 
         IConfiguration configuration,
         UserSettingsService userSettings,
+        AuthenticatedHttpClientService authHttpClient,
         string videoId,
         string playlistId,
         FeedbackStatusUpdate? onStatusUpdate = null) 
@@ -21,6 +23,7 @@ public class YouTubeFeedbackService : FeedbackService, IYouTubeFeedbackService
     {
         _videoId = videoId;
         _playlistId = playlistId;
+        _authHttpClient = authHttpClient;
     }
 
     public override async Task<(string rawComments, int commentCount, object? additionalData)> GetComments()
@@ -57,7 +60,7 @@ public class YouTubeFeedbackService : FeedbackService, IYouTubeFeedbackService
         }
 
         var getFeedbackUrl = $"{BaseUrl}/api/GetYouTubeFeedback?{string.Join("&", queryParams)}";
-        var feedbackResponse = await Http.GetAsync(getFeedbackUrl);
+        var feedbackResponse = await _authHttpClient.GetAsync(getFeedbackUrl);
         feedbackResponse.EnsureSuccessStatusCode();
         var responseContent = await feedbackResponse.Content.ReadAsStringAsync();
         
@@ -88,7 +91,7 @@ public class YouTubeFeedbackService : FeedbackService, IYouTubeFeedbackService
 
         // Analyze all commetns from the video
         int totalComments = commentCount ?? comments.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries).Length;
-        var markdownResult = await AnalyzeCommentsInternal("YouTube", comments, totalComments);
+        var markdownResult = await AnalyzeCommentsInternal("YouTube", comments, totalComments, null, _authHttpClient);
 
         // Get the videos from additionalData and if we just have 1 then just return that one.
         var videos = additionalData as List<YouTubeOutputVideo>;
@@ -116,7 +119,7 @@ public class YouTubeFeedbackService : FeedbackService, IYouTubeFeedbackService
             await Task.Delay(1500); // Simulate some processing delay
             try
             {
-                var videoMarkdown = await AnalyzeCommentsInternal($"YouTube", videoComments, video.Comments.Count);
+                var videoMarkdown = await AnalyzeCommentsInternal($"YouTube", videoComments, video.Comments.Count, null, _authHttpClient);
                 markdownResults.Add($"## YouTube Comments Analysis for : {video.Title}\n");
                 markdownResults.Add(videoMarkdown);
             }

@@ -30,6 +30,7 @@ builder.Services.AddScoped<IHistoryHelper, HistoryHelper>();
 
 builder.Services.AddHttpClient("DefaultClient")
     .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromMinutes(3));
+builder.Services.AddScoped<AuthenticatedHttpClientService>();
 builder.Services.AddScoped<FeedbackServiceProvider>();
 builder.Services.AddScoped<ContentFeedServiceProvider>();
 builder.Services.AddScoped<AuthenticationService>();

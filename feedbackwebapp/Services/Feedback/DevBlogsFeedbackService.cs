@@ -7,11 +7,13 @@ namespace FeedbackWebApp.Services.Feedback;
 public class DevBlogsFeedbackService : FeedbackService, IDevBlogsFeedbackService
 {
     public string ArticleUrl { get; set; } = string.Empty;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
-    public DevBlogsFeedbackService(IHttpClientFactory http, IConfiguration configuration, UserSettingsService userSettings, string articleUrl, FeedbackStatusUpdate? onStatusUpdate = null)
+    public DevBlogsFeedbackService(IHttpClientFactory http, IConfiguration configuration, UserSettingsService userSettings, AuthenticatedHttpClientService authHttpClient, string articleUrl, FeedbackStatusUpdate? onStatusUpdate = null)
         : base(http, configuration, userSettings, onStatusUpdate)
     {
         ArticleUrl = articleUrl;
+        _authHttpClient = authHttpClient;
     }
 
     public override async Task<(string rawComments, int commentCount, object? additionalData)> GetComments()
@@ -22,7 +24,14 @@ public class DevBlogsFeedbackService : FeedbackService, IDevBlogsFeedbackService
 
         var devBlogsCode = Configuration["FeedbackApi:GetDevBlogsFeedbackCode"] ?? throw new InvalidOperationException("DevBlogs feedback API code is required in configuration (FeedbackApi:GetDevBlogsFeedbackCode)");
         var url = $"{BaseUrl}/api/GetDevBlogsFeedback?articleUrl={Uri.EscapeDataString(ArticleUrl)}&code={Uri.EscapeDataString(devBlogsCode)}";
-        var response = await Http.GetAsync(url);
+        var response = await _authHttpClient.GetAsync(url);
+        
+        // Check for authentication errors first
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            throw new UnauthorizedAccessException("Authentication failed: Invalid or missing authentication header");
+        }
+        
         if (!response.IsSuccessStatusCode)
         {
             var error = await response.Content.ReadAsStringAsync();
@@ -49,7 +58,7 @@ public class DevBlogsFeedbackService : FeedbackService, IDevBlogsFeedbackService
         UpdateStatus(FeedbackProcessStatus.AnalyzingComments, $"Analyzing {totalComments} comments...");
 
         // Analyze the comments and return both the markdown result and the comments list
-        var markdown = await AnalyzeCommentsInternal("devblogs", comments, totalComments);
+        var markdown = await AnalyzeCommentsInternal("devblogs", comments, totalComments, null, _authHttpClient);
         return (markdown, article);
     }
 

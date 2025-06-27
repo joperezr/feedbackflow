@@ -63,7 +63,7 @@ public abstract class FeedbackService : IFeedbackService
         OnStatusUpdate?.Invoke(status, message);
     }
 
-    protected async Task<string> AnalyzeCommentsInternal(string serviceType, string comments, int commentCount, string? explicitCustomPrompt = null)
+    protected async Task<string> AnalyzeCommentsInternal(string serviceType, string comments, int commentCount, string? explicitCustomPrompt = null, AuthenticatedHttpClientService? authHttpClient = null)
     {
         var maxComments = await GetMaxCommentsToAnalyze();
 
@@ -121,7 +121,9 @@ public abstract class FeedbackService : IFeedbackService
             "application/json");
 
         var getAnalysisUrl = $"{BaseUrl}/api/AnalyzeComments?code={Uri.EscapeDataString(analyzeCode)}";
-        var analyzeResponse = await Http.PostAsync(getAnalysisUrl, analyzeContent);
+        var analyzeResponse = authHttpClient != null 
+            ? await authHttpClient.PostAsync(getAnalysisUrl, analyzeContent)
+            : await Http.PostAsync(getAnalysisUrl, analyzeContent);
         analyzeResponse.EnsureSuccessStatusCode();
 
         UpdateStatus(FeedbackProcessStatus.Completed, "Analysis completed");

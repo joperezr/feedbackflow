@@ -16,6 +16,7 @@ using SharedDump.Models.TwitterFeedback;
 using SharedDump.Models.BlueSkyFeedback;
 using SharedDump.Json;
 using SharedDump.Services.Interfaces;
+using FeedbackFunctions.Utils;
 
 namespace FeedbackFunctions;
 
@@ -37,6 +38,7 @@ public class FeedbackFunctions
     private readonly IFeedbackAnalyzerService _analyzerService;
     private readonly ITwitterService _twitterService;
     private readonly IBlueSkyService _blueSkyService;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the FeedbackFunctions class
@@ -50,6 +52,7 @@ public class FeedbackFunctions
     /// <param name="analyzerService">Feedback analyzer service for AI-powered analysis</param>
     /// <param name="twitterService">Twitter service for tweet operations</param>
     /// <param name="blueSkyService">BlueSky service for post operations</param>
+    /// <param name="configuration">Configuration for accessing app settings</param>
     public FeedbackFunctions(
         ILogger<FeedbackFunctions> logger, 
         IGitHubService githubService, 
@@ -59,7 +62,8 @@ public class FeedbackFunctions
         IDevBlogsService devBlogsService, 
         IFeedbackAnalyzerService analyzerService,
         ITwitterService twitterService,
-        IBlueSkyService blueSkyService)
+        IBlueSkyService blueSkyService,
+        IConfiguration configuration)
     {
         _logger = logger;
         _githubService = githubService;
@@ -70,6 +74,7 @@ public class FeedbackFunctions
         _analyzerService = analyzerService;
         _twitterService = twitterService;
         _blueSkyService = blueSkyService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -93,6 +98,12 @@ public class FeedbackFunctions
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing GitHub feedback request");
+
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var repo = queryParams["repo"];
@@ -167,6 +178,12 @@ public class FeedbackFunctions
     {
         _logger.LogInformation("Processing HackerNews feedback request");
 
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
+
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var idsParam = queryParams["ids"];
 
@@ -209,6 +226,12 @@ public class FeedbackFunctions
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing YouTube feedback request");
+
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var videoIds = queryParams["videos"]?.Split(',', StringSplitOptions.RemoveEmptyEntries);
@@ -275,6 +298,12 @@ public class FeedbackFunctions
     {
         _logger.LogInformation("Processing Reddit feedback request");
 
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
+
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var threadIds = queryParams["threads"]?.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
@@ -327,6 +356,13 @@ public class FeedbackFunctions
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing DevBlogs feedback request");
+
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
+
         try
         {
             var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
@@ -385,6 +421,12 @@ public class FeedbackFunctions
     {
         _logger.LogInformation("Processing comment analysis request");
 
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
+
         try
         {
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
@@ -424,6 +466,12 @@ public class FeedbackFunctions
         [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
     {
         _logger.LogInformation("Processing BYOK comment analysis request");
+
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
 
         try
         {
@@ -473,6 +521,12 @@ public class FeedbackFunctions
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing GitHub item comments request");
+
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
 
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var repo = queryParams["repo"];
@@ -533,6 +587,13 @@ public class FeedbackFunctions
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing Twitter/X feedback request");
+
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
+
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var tweetUrlOrId = queryParams["tweet"];
         if (string.IsNullOrWhiteSpace(tweetUrlOrId))
@@ -569,6 +630,13 @@ public class FeedbackFunctions
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req)
     {
         _logger.LogInformation("Processing BlueSky feedback request");
+
+        // Validate authentication
+        if (!AuthenticationHelper.ValidateAuthHeader(req, _configuration))
+        {
+            return await AuthenticationHelper.CreateUnauthorizedResponseAsync(req);
+        }
+
         var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var postUrlOrId = queryParams["post"];
         

@@ -7,18 +7,21 @@ public class AutoDataSourceFeedbackService: FeedbackService, IAutoDataSourceFeed
 {
     private readonly string[] _urls;
     private readonly FeedbackServiceProvider _serviceProvider;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
     public AutoDataSourceFeedbackService(
         IHttpClientFactory http,
         IConfiguration configuration,
         UserSettingsService userSettings,
         FeedbackServiceProvider serviceProvider,
+        AuthenticatedHttpClientService authHttpClient,
         string[] urls,
         FeedbackStatusUpdate? onStatusUpdate = null)
         : base(http, configuration, userSettings, onStatusUpdate)
     {
         _urls = urls;
         _serviceProvider = serviceProvider;
+        _authHttpClient = authHttpClient;
     }    
     
     private string GetServiceType(string url)
@@ -79,7 +82,26 @@ public class AutoDataSourceFeedbackService: FeedbackService, IAutoDataSourceFeed
             }
             catch (Exception ex)
             {
-                // Log the error but continue processing other URLs
+                // Check if this is an authentication error
+                if (ex is UnauthorizedAccessException)
+                {
+                    // Rethrow authentication errors so they're shown to the user
+                    throw;
+                }
+                
+                // Check for HTTP authentication-related errors that might not be wrapped in UnauthorizedAccessException
+                if (ex is HttpRequestException httpEx)
+                {
+                    var message = httpEx.Message.ToLower();
+                    if (message.Contains("401") || message.Contains("unauthorized") || 
+                        message.Contains("403") || message.Contains("forbidden"))
+                    {
+                        // Rethrow authentication/authorization errors so they're shown to the user
+                        throw;
+                    }
+                }
+                
+                // For other errors, log and continue processing other URLs
                 Console.Error.WriteLine($"Error processing URL {url}: {ex.Message}");
             }
         }
@@ -118,7 +140,7 @@ public class AutoDataSourceFeedbackService: FeedbackService, IAutoDataSourceFeed
             if (sourceData.Count == 1)
             {
                 var data = sourceData[0];
-                var markdown = await AnalyzeCommentsInternal(data.Source, data.Comments, data.CommentCount);
+                var markdown = await AnalyzeCommentsInternal(data.Source, data.Comments, data.CommentCount, null, _authHttpClient);
                 return ($"# {char.ToUpper(data.Source[0]) + data.Source[1..]} Feedback Analysis\n\n{markdown}", sourceData);
             }
 
@@ -127,13 +149,13 @@ public class AutoDataSourceFeedbackService: FeedbackService, IAutoDataSourceFeed
             
             // First do the overall analysis of everything
             var allCommentsText = string.Join("\n---\n", sourceData.Select(s => s.Comments));
-            var overallAnalysis = await AnalyzeCommentsInternal("auto", allCommentsText, totalComments);
+            var overallAnalysis = await AnalyzeCommentsInternal("auto", allCommentsText, totalComments, null, _authHttpClient);
             analysisBySource.Add("## Overall Analysis\n\n" + overallAnalysis);
 
             // Then analyze each source individually
             foreach (var data in sourceData)
             {
-                var markdown = await AnalyzeCommentsInternal(data.Source, data.Comments, data.CommentCount);
+                var markdown = await AnalyzeCommentsInternal(data.Source, data.Comments, data.CommentCount, null, _authHttpClient);
                 analysisBySource.Add($"## {char.ToUpper(data.Source[0]) + data.Source[1..]} Analysis\n\n{markdown}");
             }
 
@@ -142,7 +164,7 @@ public class AutoDataSourceFeedbackService: FeedbackService, IAutoDataSourceFeed
         }
         
         // Fallback to regular analysis if we don't have the source data
-        var defaultMarkdown = await AnalyzeCommentsInternal("auto", comments, totalComments);
+        var defaultMarkdown = await AnalyzeCommentsInternal("auto", comments, totalComments, null, _authHttpClient);
         return (defaultMarkdown, additionalData);
     }
 

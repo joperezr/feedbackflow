@@ -8,16 +8,19 @@ namespace FeedbackWebApp.Services.Feedback;
 public class GitHubFeedbackService : FeedbackService, IGitHubFeedbackService
 {
     private readonly string _url;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
     public GitHubFeedbackService(
         IHttpClientFactory http,
         IConfiguration configuration,
         UserSettingsService userSettings,
+        AuthenticatedHttpClientService authHttpClient,
         string url,
         FeedbackStatusUpdate? onStatusUpdate = null)
         : base(http, configuration, userSettings, onStatusUpdate)
     {
         _url = url;
+        _authHttpClient = authHttpClient;
     }
 
     public override async Task<(string rawComments, int commentCount, object? additionalData)> GetComments()
@@ -36,7 +39,7 @@ public class GitHubFeedbackService : FeedbackService, IGitHubFeedbackService
 
         // Get comments from the GitHub API
         var getFeedbackUrl = $"{BaseUrl}/api/GetGitHubFeedback?code={Uri.EscapeDataString(githubCode)}&url={Uri.EscapeDataString(_url)}&maxComments={maxComments}";
-        var feedbackResponse = await Http.GetAsync(getFeedbackUrl);
+        var feedbackResponse = await _authHttpClient.GetAsync(getFeedbackUrl);
         feedbackResponse.EnsureSuccessStatusCode();
         
         var responseContent = await feedbackResponse.Content.ReadAsStringAsync();
@@ -84,7 +87,7 @@ public class GitHubFeedbackService : FeedbackService, IGitHubFeedbackService
         UpdateStatus(FeedbackProcessStatus.AnalyzingComments, $"Analyzing {commentCount ?? 0} comments...");
 
         // Analyze comments using the shared AnalyzeComments method
-        var markdown = await AnalyzeCommentsInternal("github", comments, commentCount ?? 0);
+        var markdown = await AnalyzeCommentsInternal("github", comments, commentCount ?? 0, null, _authHttpClient);
         return (markdown, additionalData);
     }
 

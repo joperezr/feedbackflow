@@ -8,16 +8,19 @@ namespace FeedbackWebApp.Services.Feedback;
 public class RedditFeedbackService : FeedbackService, IRedditFeedbackService
 {
     private readonly string _threadId;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
     public RedditFeedbackService(
         string threadId,
         IHttpClientFactory http,
         IConfiguration configuration,
         UserSettingsService userSettings,
+        AuthenticatedHttpClientService authHttpClient,
         FeedbackStatusUpdate? onStatusUpdate = null)
         : base(http, configuration, userSettings, onStatusUpdate)
     {
         _threadId = threadId;
+        _authHttpClient = authHttpClient;
     }
 
     private int CountCommentsAndReplies(List<RedditCommentModel>? comments)
@@ -44,7 +47,7 @@ public class RedditFeedbackService : FeedbackService, IRedditFeedbackService
 
         // Get comments from the Reddit API
         var getFeedbackUrl = $"{BaseUrl}/api/GetRedditFeedback?code={Uri.EscapeDataString(redditCode)}&threads={Uri.EscapeDataString(processedId)}&maxComments={maxComments}";
-        var feedbackResponse = await Http.GetAsync(getFeedbackUrl);
+        var feedbackResponse = await _authHttpClient.GetAsync(getFeedbackUrl);
         feedbackResponse.EnsureSuccessStatusCode();
         
         var responseContent = await feedbackResponse.Content.ReadAsStringAsync();
@@ -77,7 +80,7 @@ public class RedditFeedbackService : FeedbackService, IRedditFeedbackService
         UpdateStatus(FeedbackProcessStatus.AnalyzingComments, $"Analyzing {totalComments} comments...");
 
         // Analyze comments
-        var markdownResult = await AnalyzeCommentsInternal("reddit", comments, totalComments);
+        var markdownResult = await AnalyzeCommentsInternal("reddit", comments, totalComments, null, _authHttpClient);
         return (markdownResult, additionalData);
     }
 

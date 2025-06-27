@@ -9,12 +9,14 @@ public class FeedbackServiceProvider
     private readonly IHttpClientFactory _http;
     private readonly bool _useMocks;
     private readonly UserSettingsService _userSettings;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
-    public FeedbackServiceProvider(IConfiguration configuration, IHttpClientFactory http, UserSettingsService userSettings)
+    public FeedbackServiceProvider(IConfiguration configuration, IHttpClientFactory http, UserSettingsService userSettings, AuthenticatedHttpClientService authHttpClient)
     {
         _configuration = configuration;
         _http = http;
         _userSettings = userSettings;
+        _authHttpClient = authHttpClient;
         _useMocks = configuration.GetValue<bool>("FeedbackApi:UseMocks");
     }
 
@@ -22,47 +24,47 @@ public class FeedbackServiceProvider
     {
         return _useMocks 
             ? new MockYouTubeFeedbackService(_http, _configuration, _userSettings, onStatusUpdate)
-            : new YouTubeFeedbackService(_http, _configuration, _userSettings, videoIds, playlistIds, onStatusUpdate);
+            : new YouTubeFeedbackService(_http, _configuration, _userSettings, _authHttpClient, videoIds, playlistIds, onStatusUpdate);
     }
 
     public IHackerNewsFeedbackService CreateHackerNewsService(string storyIds, FeedbackStatusUpdate? onStatusUpdate = null)
     {
         return _useMocks
             ? new MockHackerNewsFeedbackService(_http, _configuration, _userSettings, onStatusUpdate)
-            : new HackerNewsFeedbackService(_http, _configuration, _userSettings, storyIds, onStatusUpdate);
+            : new HackerNewsFeedbackService(_http, _configuration, _userSettings, _authHttpClient, storyIds, onStatusUpdate);
     }
 
     public IGitHubFeedbackService CreateGitHubService(string url, FeedbackStatusUpdate? onStatusUpdate = null)
     {
         return _useMocks
             ? new MockGitHubFeedbackService(_http, _configuration, _userSettings, onStatusUpdate)
-            : new GitHubFeedbackService(_http, _configuration, _userSettings, url, onStatusUpdate);
+            : new GitHubFeedbackService(_http, _configuration, _userSettings, _authHttpClient, url, onStatusUpdate);
     }    public IRedditFeedbackService CreateRedditService(string threadId, FeedbackStatusUpdate? onStatusUpdate = null)
     {
         return _useMocks
             ? new MockRedditFeedbackService(_http, _configuration, _userSettings, onStatusUpdate)
-            : new RedditFeedbackService(threadId, _http, _configuration, _userSettings, onStatusUpdate);
+            : new RedditFeedbackService(threadId, _http, _configuration, _userSettings, _authHttpClient, onStatusUpdate);
     }
 
     public IDevBlogsFeedbackService CreateDevBlogsService(string articleUrl, FeedbackStatusUpdate? onStatusUpdate = null)
     {
         return _useMocks
             ? new MockDevBlogsFeedbackService(_http, _configuration, _userSettings, onStatusUpdate) { ArticleUrl = articleUrl }
-            : new DevBlogsFeedbackService(_http, _configuration, _userSettings, articleUrl, onStatusUpdate);
+            : new DevBlogsFeedbackService(_http, _configuration, _userSettings, _authHttpClient, articleUrl, onStatusUpdate);
     }
 
     public ITwitterFeedbackService CreateTwitterService(string tweetUrlOrId, FeedbackStatusUpdate? onStatusUpdate = null)
     {
         return _useMocks
             ? new MockTwitterFeedbackService(_http, _configuration, _userSettings, onStatusUpdate)
-            : new TwitterFeedbackService(_http, _configuration, _userSettings, tweetUrlOrId, onStatusUpdate);
+            : new TwitterFeedbackService(_http, _configuration, _userSettings, _authHttpClient, tweetUrlOrId, onStatusUpdate);
     }
 
     public IBlueSkyFeedbackService CreateBlueSkyService(string postUrlOrId, FeedbackStatusUpdate? onStatusUpdate = null)
     {
         return _useMocks
             ? new MockBlueSkyFeedbackService(_http, _configuration, _userSettings, onStatusUpdate)
-            : new BlueSkyFeedbackService(_http, _configuration, _userSettings, postUrlOrId, onStatusUpdate);
+            : new BlueSkyFeedbackService(_http, _configuration, _userSettings, _authHttpClient, postUrlOrId, onStatusUpdate);
     }
 
     public IManualFeedbackService CreateManualService(string content, string? customPrompt = null, FeedbackStatusUpdate? onStatusUpdate = null)
@@ -73,7 +75,7 @@ public class FeedbackServiceProvider
                   Content = content,
                   CustomPrompt = customPrompt ?? string.Empty
               }
-            : new ManualFeedbackService(_http, _configuration, _userSettings, content, customPrompt, onStatusUpdate);
+            : new ManualFeedbackService(_http, _configuration, _userSettings, _authHttpClient, content, customPrompt, onStatusUpdate);
     }
 
     public IFeedbackService CreateAutoDataSourceService(string[] urls, FeedbackStatusUpdate? onStatusUpdate = null)
@@ -98,7 +100,7 @@ public class FeedbackServiceProvider
             return new MockAutoDataSourceFeedbackService(_http, _configuration, _userSettings, onStatusUpdate);
         }
         
-        return new AutoDataSourceFeedbackService(_http, _configuration, _userSettings, this, urls, onStatusUpdate);
+        return new AutoDataSourceFeedbackService(_http, _configuration, _userSettings, this, _authHttpClient, urls, onStatusUpdate);
     }
     public IFeedbackService? GetService(string url)
     {

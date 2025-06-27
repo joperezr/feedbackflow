@@ -10,16 +10,19 @@ namespace FeedbackWebApp.Services.Feedback;
 public class BlueSkyFeedbackService : FeedbackService, IBlueSkyFeedbackService
 {
     private readonly string _postUrlOrId;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
     public BlueSkyFeedbackService(
         IHttpClientFactory http,
         IConfiguration configuration,
         UserSettingsService userSettings,
+        AuthenticatedHttpClientService authHttpClient,
         string postUrlOrId,
         FeedbackStatusUpdate? onStatusUpdate = null)
         : base(http, configuration, userSettings, onStatusUpdate)
     {
         _postUrlOrId = postUrlOrId;
+        _authHttpClient = authHttpClient;
     }
 
     public override async Task<(string rawComments, int commentCount, object? additionalData)> GetComments()
@@ -34,7 +37,7 @@ public class BlueSkyFeedbackService : FeedbackService, IBlueSkyFeedbackService
 
         var maxComments = await GetMaxCommentsToAnalyze();
         var getFeedbackUrl = $"{BaseUrl}/api/GetBlueSkyFeedback?code={Uri.EscapeDataString(blueSkyCode)}&post={Uri.EscapeDataString(_postUrlOrId)}&maxComments={maxComments}";
-        var feedbackResponse = await Http.GetAsync(getFeedbackUrl);
+        var feedbackResponse = await _authHttpClient.GetAsync(getFeedbackUrl);
         feedbackResponse.EnsureSuccessStatusCode();
         var responseContent = await feedbackResponse.Content.ReadAsStringAsync();
         
@@ -57,7 +60,7 @@ public class BlueSkyFeedbackService : FeedbackService, IBlueSkyFeedbackService
         UpdateStatus(FeedbackProcessStatus.AnalyzingComments, $"Found {totalComments} comments and replies...");
 
         // Analyze comments using the shared AnalyzeComments method
-        var markdown = await AnalyzeCommentsInternal("bluesky", comments, totalComments);
+        var markdown = await AnalyzeCommentsInternal("bluesky", comments, totalComments, null, _authHttpClient);
         return (markdown, feedback);
     }
 

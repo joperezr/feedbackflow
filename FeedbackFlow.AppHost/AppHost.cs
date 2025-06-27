@@ -30,6 +30,7 @@ string? openApiModel = null;
 
 var feedbackFunctionsProject = builder.AddAzureFunctionsProject<Projects.feedbackfunctions>("feedback-functions")
         .WithHostStorage(storage)
+        .WithEnvironment("FeedbackApp__AccessPassword", frontendPassword)
         .WithEnvironment(context =>
         {
             var useMocks = string.IsNullOrWhiteSpace(openApiEndpoint) || 

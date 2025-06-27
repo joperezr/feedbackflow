@@ -7,16 +7,19 @@ namespace FeedbackWebApp.Services.Feedback;
 public class TwitterFeedbackService : FeedbackService, ITwitterFeedbackService
 {
     private readonly string _tweetUrlOrId;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
     public TwitterFeedbackService(
         IHttpClientFactory http,
         IConfiguration configuration,
         UserSettingsService userSettings,
+        AuthenticatedHttpClientService authHttpClient,
         string tweetUrlOrId,
         FeedbackStatusUpdate? onStatusUpdate = null)
         : base(http, configuration, userSettings, onStatusUpdate)
     {
         _tweetUrlOrId = tweetUrlOrId;
+        _authHttpClient = authHttpClient;
     }
 
     public override async Task<(string rawComments, int commentCount, object? additionalData)> GetComments()
@@ -31,7 +34,7 @@ public class TwitterFeedbackService : FeedbackService, ITwitterFeedbackService
 
         var maxComments = await GetMaxCommentsToAnalyze();
         var getFeedbackUrl = $"{BaseUrl}/api/GetTwitterFeedback?code={Uri.EscapeDataString(twitterCode)}&tweet={Uri.EscapeDataString(_tweetUrlOrId)}&maxComments={maxComments}";
-        var feedbackResponse = await Http.GetAsync(getFeedbackUrl);
+        var feedbackResponse = await _authHttpClient.GetAsync(getFeedbackUrl);
         feedbackResponse.EnsureSuccessStatusCode();
         var responseContent = await feedbackResponse.Content.ReadAsStringAsync();
         var feedback = JsonSerializer.Deserialize<TwitterFeedbackResponse>(responseContent);
@@ -78,7 +81,7 @@ public class TwitterFeedbackService : FeedbackService, ITwitterFeedbackService
         UpdateStatus(FeedbackProcessStatus.AnalyzingComments, $"Analyzing {totalComments} tweets and replies...");
 
         // Analyze comments
-        var markdownResult = await AnalyzeCommentsInternal("twitter", comments, totalComments);
+        var markdownResult = await AnalyzeCommentsInternal("twitter", comments, totalComments, null, _authHttpClient);
         return (markdownResult, additionalData);
     }
 

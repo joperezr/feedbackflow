@@ -7,16 +7,19 @@ public class ManualFeedbackService : FeedbackService, IManualFeedbackService
 {
     public string CustomPrompt { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
+    private readonly AuthenticatedHttpClientService _authHttpClient;
 
     public ManualFeedbackService(
         IHttpClientFactory http, 
         IConfiguration configuration, 
         UserSettingsService userSettings,
+        AuthenticatedHttpClientService authHttpClient,
         string content,
         string? customPrompt = null,
         FeedbackStatusUpdate? onStatusUpdate = null)
         : base(http, configuration, userSettings, onStatusUpdate)
     {
+        _authHttpClient = authHttpClient;
         Content = content;
         if (!string.IsNullOrEmpty(customPrompt))
         {
@@ -48,7 +51,7 @@ public class ManualFeedbackService : FeedbackService, IManualFeedbackService
         }
 
         // For manual service, we use "manual" as the service type and pass custom prompt
-        var result = await AnalyzeCommentsInternal("manual", comments, commentCount ?? 1, CustomPrompt);
+        var result = await AnalyzeCommentsInternal("manual", comments, commentCount ?? 1, CustomPrompt, _authHttpClient);
         return (result, null);
     }
 

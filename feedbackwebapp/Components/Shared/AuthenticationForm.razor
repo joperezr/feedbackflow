@@ -95,7 +95,7 @@ else
     private async Task HandleAuthenticated(bool success)
     {
         isAuthenticated = success;
-        await AuthService.SetAuthenticatedAsync(success);
+        await AuthService.SetAuthenticatedAsync(success, success ? password : null);
         await OnAuthenticated.InvokeAsync(success);
     }
 
